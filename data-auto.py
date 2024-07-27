@@ -15,10 +15,36 @@ def data_auto(data, checker_lists):
     # Update Result for licenses found in the checker set
     data.loc[data['License'].isin(checker_set), 'Result'] = 'ACTIVE'
     
+    # Identify licenses in the dataset but not in the checker list
+    dataset_set = set(data['License'])
+    missing_from_checker = dataset_set - checker_set
+    
+    # Identify licenses in the checker list but not in the dataset
+    missing_from_dataset = checker_set - dataset_set
+    
+    # Create DataFrame for missing licenses from checker
+    missing_checker_data = pd.DataFrame(list(missing_from_checker), columns=['License'])
+    missing_checker_data['Result'] = 'MISSING (Dataset)'
+    missing_checker_data[['License State', 'License Type']] = missing_checker_data['License'].str.split(' ', 1, expand=True)
+    
+    # Create DataFrame for missing licenses from dataset
+    missing_dataset_data = pd.DataFrame(list(missing_from_dataset), columns=['License'])
+    missing_dataset_data['Result'] = 'MISSING (Checker)'
+    missing_dataset_data[['License State', 'License Type']] = missing_dataset_data['License'].str.split(' ', 1, expand=True)
+    
     # Drop the auxiliary lower-case column and keep original case for License
     final_data = data[['License State', 'License Type', 'Result']]
     final_data['License'] = final_data['License State'] + ' ' + final_data['License Type']
     final_data = final_data[['License', 'Result']]
+    
+    # Append the missing licenses to the final data
+    missing_checker_data['License'] = missing_checker_data['License State'] + ' ' + missing_checker_data['License Type']
+    missing_checker_data = missing_checker_data[['License', 'Result']]
+    
+    missing_dataset_data['License'] = missing_dataset_data['License State'] + ' ' + missing_dataset_data['License Type']
+    missing_dataset_data = missing_dataset_data[['License', 'Result']]
+    
+    final_data = pd.concat([final_data, missing_checker_data, missing_dataset_data], ignore_index=True)
     
     return final_data
 
@@ -43,8 +69,8 @@ def main(input_file, checker_files, output_file):
 # Example usage
 input_file = 'oceo.xlsx'  # Replace with your dataset file name
 checker_files = [
-    '51pc_checker.xlsx',
     #'fraud_checker.xlsx'
+     '51pc_checker.xlsx',
     # 'ASG_checker.xlsx',
     # '37pc_checker.xlsx',
     # 'RAM_NL_checker.xlsx'
